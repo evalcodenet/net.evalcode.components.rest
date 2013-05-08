@@ -25,21 +25,39 @@ namespace Components;
     //--------------------------------------------------------------------------
 
 
-    // ACCESSORS
-    public function dispatch(array $parameters_)
+    // STATIC ACCESSORS
+    public static function dispatch(Http_Scriptlet_Context $context_, Uri $uri_)
     {
-      $this->initialize();
+      var_dump((string)$uri_);
+      var_dump((string)$context_->getContextRoot());
+      var_dump((string)$context_->getResponse()->getMimeType());
+      var_dump((string)$context_->getContextUri());
+      die();
+      if(null===self::$m_routes)
+        $this->initialize();
 
-      $params=Http_Scriptlet_Request::getUri()->getPathParams();
-      $context=self::$m_applications;
-      while($chunk=array_shift($params))
+      $params=array();
+      $segments=Http_Scriptlet_Request::getUri()->getPathParams();
+
+      $pattern=null;
+      $resource=null;
+
+      while(count($segments))
       {
-        if(is_array($context) && isset($context[$chunk]))
-          $context=$context[$chunk];
-      }
-      var_dump($context, $chunk, $params);
-      print_r(Http_Scriptlet_Request::getUri());
+        $params[]=array_pop($segments);
+        $path=implode('/', $segments);
 
+        if(isset(self::$m_routes[$path]))
+        {
+          $resource=self::$m_routes[$path][0];
+          $pattern=self::$m_routes[$path][1];
+
+          break;
+        }
+      }
+
+      if(null===$resource)
+        throw new Http_Exception('components/rest/resource', Http_Exception::NOT_FOUND);
     }
     //--------------------------------------------------------------------------
 
@@ -78,14 +96,14 @@ namespace Components;
 
 
     // IMPLEMENTATION
-    private static $m_applications;
+    private static $m_routes;
     private static $m_resources=array();
     //-----
 
 
     private function initialize()
     {
-      if(false===(self::$m_applications=Cache::get('components/rest/applications')))
+      if(false===(self::$m_routes=Cache::get('components/rest/routes')))
       {
         Annotations::registerAnnotations(array(
           Annotation_Application::NAME=>Annotation_Application::TYPE,
@@ -101,10 +119,10 @@ namespace Components;
         {
           $annotations=Annotations::get($type);
 
-          $application=&self::$m_applications;
+          $applicationName=null;
           if(($applicationAnnotation=$annotations->getTypeAnnotation(Annotation_Application::NAME))
-            && ($applicationName=$applicationAnnotation->value))
-            $application=&self::$m_applications[$applicationName];
+            && $applicationAnnotation->value)
+            $applicationName=$applicationAnnotation->value;
 
           if(!$resourceAnnotation=$annotations->getTypeAnnotation(Annotation_Resource::NAME))
             continue;
@@ -115,12 +133,17 @@ namespace Components;
             foreach($methodAnnotations as $methodAnnotation)
             {
               if($methodAnnotation instanceof Annotation_Method)
-                $application[$resource][$methodName]=$methodAnnotation->value;
+              {
+                if(null===$applicationName)
+                  self::$m_routes["$resource/$methodName"]=array($type, $methodAnnotation->value);
+                else
+                  self::$m_routes["$applicationName/$resource/$methodName"]=array($type, $methodAnnotation->value);
+              }
             }
           }
         }
 
-        Cache::set('components/rest/applications', self::$m_applications);
+        Cache::set('components/rest/routes', self::$m_routes);
       }
     }
     //--------------------------------------------------------------------------
