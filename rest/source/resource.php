@@ -15,10 +15,15 @@ namespace Components;
   class Rest_Resource extends Http_Scriptlet
   {
     // STATIC ACCESSORS
-    public static function register($resource_=null)
+    public static function serve($pattern_, $resource_=null)
     {
+      if(false===self::$m_initialized)
+        self::initialize();
+
       if(null===$resource_)
         $resource_=get_called_class();
+
+      parent::serve($pattern_, $resource_);
 
       self::$m_resources[$resource_]=$resource_;
     }
@@ -28,36 +33,49 @@ namespace Components;
     // STATIC ACCESSORS
     public static function dispatch(Http_Scriptlet_Context $context_, Uri $uri_)
     {
-      var_dump((string)$uri_);
-      var_dump((string)$context_->getContextRoot());
-      var_dump((string)$context_->getResponse()->getMimeType());
-      var_dump((string)$context_->getContextUri());
-      die();
-      if(null===self::$m_routes)
-        $this->initialize();
+      if(null===self::$m_methods)
+        self::initializeMethods();
+
+      $resource=get_called_class();
+      if(!($method=$uri_->shiftPathParam()) || false===isset(self::$m_methods[$resource][$method]))
+        throw new Http_Exception('components/rest/resource', Http_Exception::NOT_FOUND);
+
+      $method=self::$m_methods[$resource][$method];
+      if(false===isset($method['methods'][$context_->getRequest()->getMethod()]))
+        throw new Http_Exception('components/rest/resource', Http_Exception::NOT_FOUND);
+
+      if(isset($method['path']) && count($uri_->getPathParams())<count($method['path']))
+        throw new Http_Exception('components/rest/resource', Http_Exception::NOT_FOUND);
+
+      /* @var $resource \Components\Rest_Resource */
+      $resource=new $resource();
+      $resource->request=$context_->getRequest();
+      $resource->response=$context_->getResponse();
 
       $params=array();
-      $segments=Http_Scriptlet_Request::getUri()->getPathParams();
-
-      $pattern=null;
-      $resource=null;
-
-      while(count($segments))
+      if(isset($method['path']) || isset($method['query']))
       {
-        $params[]=array_pop($segments);
-        $path=implode('/', $segments);
+        $marshaller=Object_Marshaller::forMimeType($resource->response->getMimeType());
 
-        if(isset(self::$m_routes[$path]))
+        foreach($method['path'] as $name=>$type)
+          $params[$name]=$marshaller->unmarshal($uri_->shiftPathParam(), $type);
+
+        if(isset($method['query']))
         {
-          $resource=self::$m_routes[$path][0];
-          $pattern=self::$m_routes[$path][1];
+          foreach($method['query'] as $name=>$type)
+          {
+            $queryParamName=String::underscoreToCamelCase($name);
 
-          break;
+            if($uri_->hasQueryParam($queryParamName))
+              $params[$name]=$marshaller->unmarshal($uri_->getQueryParam($queryParamName), $type);
+            else
+              $params[$name]=null;
+          }
         }
       }
 
-      if(null===$resource)
-        throw new Http_Exception('components/rest/resource', Http_Exception::NOT_FOUND);
+      if($result=call_user_func_array(array($resource, $method['name']), $params))
+        echo $marshaller->marshal($result);
     }
     //--------------------------------------------------------------------------
 
@@ -96,55 +114,82 @@ namespace Components;
 
 
     // IMPLEMENTATION
-    private static $m_routes;
+    private static $m_initialized=false;
     private static $m_resources=array();
+    private static $m_methods;
     //-----
 
 
-    private function initialize()
+    private static function initializeMethods()
     {
-      if(false===(self::$m_routes=Cache::get('components/rest/routes')))
+      if(false===(self::$m_methods=Cache::get('components/rest/methods')))
       {
-        Annotations::registerAnnotations(array(
-          Annotation_Application::NAME=>Annotation_Application::TYPE,
-          Annotation_Resource::NAME=>Annotation_Resource::TYPE,
-          Annotation_Method_Delete::NAME=>Annotation_Method_Delete::TYPE,
-          Annotation_Method_Get::NAME=>Annotation_Method_Get::TYPE,
-          Annotation_Method_Options::NAME=>Annotation_Method_Options::TYPE,
-          Annotation_Method_Post::NAME=>Annotation_Method_Post::TYPE,
-          Annotation_Method_Put::NAME=>Annotation_Method_Put::TYPE
-        ));
+        self::$m_methods=array();
 
-        foreach(self::$m_resources as $type)
+        foreach(self::$m_resources as $resource)
         {
-          $annotations=Annotations::get($type);
+          $annotations=Annotations::get($resource);
 
-          $applicationName=null;
-          if(($applicationAnnotation=$annotations->getTypeAnnotation(Annotation_Application::NAME))
-            && $applicationAnnotation->value)
-            $applicationName=$applicationAnnotation->value;
-
-          if(!$resourceAnnotation=$annotations->getTypeAnnotation(Annotation_Resource::NAME))
-            continue;
-
-          $resource=$resourceAnnotation->value;
           foreach($annotations->getMethodAnnotations() as $methodName=>$methodAnnotations)
           {
-            foreach($methodAnnotations as $methodAnnotation)
+            $httpMethods=array();
+            foreach($methodAnnotations as $methodAnnotationName=>$methodAnnotation)
             {
               if($methodAnnotation instanceof Annotation_Method)
+                $httpMethods[$methodAnnotationName]=$methodAnnotationName;
+            }
+
+            if(count($httpMethods))
+            {
+              $type=new \ReflectionClass($resource);
+              $method=$type->getMethod($methodName);
+
+              $parameters=$method->getParameters();
+
+              $path=array();
+              $query=array();
+              foreach($parameters as $parameter)
               {
-                if(null===$applicationName)
-                  self::$m_routes["$resource/$methodName"]=array($type, $methodAnnotation->value);
+                if($parameter->isOptional())
+                  $query[$parameter->name]=$parameter->getClass()->name;
                 else
-                  self::$m_routes["$applicationName/$resource/$methodName"]=array($type, $methodAnnotation->value);
+                  $path[$parameter->name]=$parameter->getClass()->name;
               }
+
+              $matches=array();
+              preg_match('/\@return\s+([\\a-z]+)\n/i', $method->getDocComment(), $matches);
+
+              $return=null;
+              if(isset($matches[1]))
+                $return=$matches[1];
+
+              self::$m_methods[$resource][$methodName]=array(
+                'name'=>$methodName,
+                'methods'=>$httpMethods,
+                'path'=>$path,
+                'query'=>$query,
+                'return'=>$return
+              );
             }
           }
         }
 
-        Cache::set('components/rest/routes', self::$m_routes);
+        Cache::set('components/rest/methods', self::$m_methods);
       }
+    }
+
+    private static function initialize()
+    {
+      Annotations::registerAnnotations(array(
+        Annotation_Application::NAME=>Annotation_Application::TYPE,
+        Annotation_Method_Delete::NAME=>Annotation_Method_Delete::TYPE,
+        Annotation_Method_Get::NAME=>Annotation_Method_Get::TYPE,
+        Annotation_Method_Options::NAME=>Annotation_Method_Options::TYPE,
+        Annotation_Method_Post::NAME=>Annotation_Method_Post::TYPE,
+        Annotation_Method_Put::NAME=>Annotation_Method_Put::TYPE
+      ));
+
+      self::$m_initialized=true;
     }
     //--------------------------------------------------------------------------
   }

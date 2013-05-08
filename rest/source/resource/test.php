@@ -12,24 +12,13 @@ namespace Components;
    *
    * @author evalcode.net
    *
-   * @Application(foo)
-   * @Resource(test)
+   * @Application(rest)
    */
   class Rest_Resource_Test extends Rest_Resource
   {
-    // PROPERTIES
-    /**
-     * @Inject(Http_Scriptlet_Request)
-     *
-     * @var Http_Scriptlet_Request
-     */
-    public $request;
-    //--------------------------------------------------------------------------
-
-
     // ACCESSORS
     /**
-     * @GET(pk/?date&log:false)
+     * @GET
      *
      * @param \Components\Integer $pk_
      * @param \Components\Date $date_
@@ -37,10 +26,9 @@ namespace Components;
      *
      * @return \Components\Date
      */
-    public function bar(Integer $pk_, Date $date_=null, Boolean $log_=null)
+    public function poke(\Components\Integer $pk_, \Components\Date $date_=null, \Components\Boolean $log_=null)
     {
-      if(null===$date_)
-        return Date::now();
+      Log::info('components/rest/resource/test', 'Poke %s', $date_);
 
       return $date_;
     }
