@@ -5,24 +5,28 @@ namespace Components;
 
 
   /**
-   * Annotation_Method
+   * Annotation_Param_Query
    *
    * @package net.evalcode.components
-   * @subpackage annotation
+   * @subpackage annotation.param
    *
    * @author evalcode.net
+   *
+   * @property string name
+   * @property string type
+   * @property string default
    */
-  class Annotation_Method extends Annotation
+  final class Annotation_Param_Query extends Annotation
   {
     // PREDEFINED PROPERTIES
     /**
-     * method
+     * queryParam
      *
      * @var string
      */
-    const NAME='method';
+    const NAME='queryParam';
     /**
-     * Annotation_Method
+     * Annotation_Param_Query
      *
      * @var string
      */

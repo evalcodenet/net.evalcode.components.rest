@@ -16,11 +16,11 @@ namespace Components;
   {
     // PREDEFINED PROPERTIES
     /**
-     * Application
+     * application
      *
      * @var string
      */
-    const NAME='Application';
+    const NAME='application';
     /**
      * Annotation_Application
      *

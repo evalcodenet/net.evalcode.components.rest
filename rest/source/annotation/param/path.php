@@ -5,24 +5,26 @@ namespace Components;
 
 
   /**
-   * Annotation_Method
+   * Annotation_Param_Path
    *
    * @package net.evalcode.components
-   * @subpackage annotation
+   * @subpackage annotation.param
    *
    * @author evalcode.net
+   *
+   * @property string type
    */
-  class Annotation_Method extends Annotation
+  final class Annotation_Param_Path extends Annotation
   {
     // PREDEFINED PROPERTIES
     /**
-     * method
+     * pathParam
      *
      * @var string
      */
-    const NAME='method';
+    const NAME='pathParam';
     /**
-     * Annotation_Method
+     * Annotation_Param_Path
      *
      * @var string
      */

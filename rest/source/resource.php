@@ -12,10 +12,11 @@ namespace Components;
    *
    * @author evalcode.net
    */
+  // TODO Support array|HashMap parameters.
   class Rest_Resource extends Http_Scriptlet
   {
     // STATIC ACCESSORS
-    public static function serve($pattern_, $resource_=null)
+    public static function serve($pattern_=null, $resource_=null)
     {
       if(false===self::$m_initialized)
         self::initialize();
@@ -33,7 +34,7 @@ namespace Components;
     // STATIC ACCESSORS
     public static function dispatch(Http_Scriptlet_Context $context_, Uri $uri_)
     {
-      if(null===self::$m_methods)
+      if(null===self::$m_methods || false===isset(self::$m_methods[$resource][$method]))
         self::initializeMethods();
 
       $resource=get_called_class();
@@ -47,7 +48,7 @@ namespace Components;
       if(isset($method['path']) && count($uri_->getPathParams())<count($method['path']))
         throw new Http_Exception('components/rest/resource', Http_Exception::NOT_FOUND);
 
-      /* @var $resource \Components\Rest_Resource */
+      /* @var $resource Components\Rest_Resource */
       $resource=new $resource();
       $resource->request=$context_->getRequest();
       $resource->response=$context_->getResponse();
@@ -55,19 +56,19 @@ namespace Components;
       $params=array();
       if(isset($method['path']) || isset($method['query']))
       {
-        $marshaller=Object_Marshaller::forMimeType($resource->response->getMimeType());
+        $marshaller=Marshaller::forMimeType($resource->response->getMimeType());
 
         foreach($method['path'] as $name=>$type)
           $params[$name]=$marshaller->unmarshal($uri_->shiftPathParam(), $type);
 
         if(isset($method['query']))
         {
-          foreach($method['query'] as $name=>$type)
+          foreach($method['query'] as $name=>$options)
           {
-            $queryParamName=String::underscoreToCamelCase($name);
-
-            if($uri_->hasQueryParam($queryParamName))
-              $params[$name]=$marshaller->unmarshal($uri_->getQueryParam($queryParamName), $type);
+            if($uri_->hasQueryParam($options['name']))
+              $params[$name]=$marshaller->unmarshal($uri_->getQueryParam($options['name']), $options['type']);
+            else if($options['value'])
+              $params[$name]=$marshaller->unmarshal($options['value'], $options['type']);
             else
               $params[$name]=null;
           }
@@ -123,59 +124,117 @@ namespace Components;
     private static function initializeMethods()
     {
       if(false===(self::$m_methods=Cache::get('components/rest/methods')))
-      {
         self::$m_methods=array();
 
-        foreach(self::$m_resources as $resource)
+      foreach(self::$m_resources as $resource)
+      {
+        if(isset(self::$m_methods[$resource]))
+          continue;
+
+        $annotations=Annotations::get($resource);
+
+        foreach($annotations->getMethodAnnotations() as $methodName=>$methodAnnotations)
         {
-          $annotations=Annotations::get($resource);
-
-          foreach($annotations->getMethodAnnotations() as $methodName=>$methodAnnotations)
+          $httpMethods=array();
+          foreach($methodAnnotations as $methodAnnotationName=>$methodAnnotation)
           {
-            $httpMethods=array();
-            foreach($methodAnnotations as $methodAnnotationName=>$methodAnnotation)
+            if($methodAnnotation instanceof Annotation_Method)
+              $httpMethods[$methodAnnotationName]=$methodAnnotationName;
+          }
+
+          if(count($httpMethods))
+          {
+            $type=new \ReflectionClass($resource);
+            $method=$type->getMethod($methodName);
+
+            $parameters=$method->getParameters();
+
+            $path=array();
+            $query=array();
+            foreach($parameters as $parameter)
             {
-              if($methodAnnotation instanceof Annotation_Method)
-                $httpMethods[$methodAnnotationName]=$methodAnnotationName;
-            }
+              $parameterAnnotations=$annotations->getParameterAnnotations($methodName, $parameter->name);
 
-            if(count($httpMethods))
-            {
-              $type=new \ReflectionClass($resource);
-              $method=$type->getMethod($methodName);
-
-              $parameters=$method->getParameters();
-
-              $path=array();
-              $query=array();
-              foreach($parameters as $parameter)
+              if(isset($parameterAnnotations[Annotation_Param_Query::NAME]))
               {
-                if($parameter->isOptional())
-                  $query[$parameter->name]=$parameter->getClass()->name;
+                if(isset($parameterAnnotations[Annotation_Param_Query::NAME]->name))
+                  $name=$parameterAnnotations[Annotation_Param_Query::NAME]->name;
                 else
-                  $path[$parameter->name]=$parameter->getClass()->name;
+                  $name=$parameter->name;
+
+                if(isset($parameterAnnotations[Annotation_Param_Query::NAME]->type))
+                {
+                  $type=$parameterAnnotations[Annotation_Param_Query::NAME]->type;
+
+                  if(Primitive::isNative($type))
+                    $type=Primitive::asBoxed($type);
+                }
+                else
+                {
+                  if($type=$parameter->getClass())
+                    $type=$type->name;
+                  else
+                    $type=String::TYPE;
+                }
+
+                if(isset($parameterAnnotations[Annotation_Param_Query::NAME]->default))
+                  $value=$parameterAnnotations[Annotation_Param_Query::NAME]->default;
+                else
+                  $value=null;
+
+                $query[$parameter->name]=array(
+                  'name'=>$name,
+                  'type'=>$type,
+                  'value'=>$value
+                );
               }
+              else if($parameter->isOptional())
+              {
+                if($type=$parameter->getClass())
+                  $query[$parameter->name]=$type->name;
+                else
+                  $query[$parameter->name]=String::TYPE;
+              }
+              else
+              {
+                if(isset($parameterAnnotations[Annotation_Param_Path::NAME]->type))
+                {
+                  $type=$parameterAnnotations[Annotation_Param_Path::NAME]->type;
 
-              $matches=array();
-              preg_match('/\@return\s+([\\a-z]+)\n/i', $method->getDocComment(), $matches);
+                  if(Primitive::isNative($type))
+                    $type=Primitive::asBoxed($type);
 
-              $return=null;
-              if(isset($matches[1]))
-                $return=$matches[1];
-
-              self::$m_methods[$resource][$methodName]=array(
-                'name'=>$methodName,
-                'methods'=>$httpMethods,
-                'path'=>$path,
-                'query'=>$query,
-                'return'=>$return
-              );
+                  $path[$parameter->name]=$type;
+                }
+                else
+                {
+                  if($type=$parameter->getClass())
+                    $path[$parameter->name]=$type->name;
+                  else
+                    $path[$parameter->name]=String::TYPE;
+                }
+              }
             }
+
+            $matches=array();
+            preg_match('/\@return\s+([\\a-z]+)\n/i', $method->getDocComment(), $matches);
+
+            $return=null;
+            if(isset($matches[1]))
+              $return=$matches[1];
+
+            self::$m_methods[$resource][$methodName]=array(
+              'name'=>$methodName,
+              'methods'=>$httpMethods,
+              'path'=>$path,
+              'query'=>$query,
+              'return'=>$return
+            );
           }
         }
-
-        Cache::set('components/rest/methods', self::$m_methods);
       }
+
+      Cache::set('components/rest/methods', self::$m_methods);
     }
 
     private static function initialize()
@@ -186,7 +245,9 @@ namespace Components;
         Annotation_Method_Get::NAME=>Annotation_Method_Get::TYPE,
         Annotation_Method_Options::NAME=>Annotation_Method_Options::TYPE,
         Annotation_Method_Post::NAME=>Annotation_Method_Post::TYPE,
-        Annotation_Method_Put::NAME=>Annotation_Method_Put::TYPE
+        Annotation_Method_Put::NAME=>Annotation_Method_Put::TYPE,
+        Annotation_Param_Path::NAME=>Annotation_Param_Path::TYPE,
+        Annotation_Param_Query::NAME=>Annotation_Param_Query::TYPE
       ));
 
       self::$m_initialized=true;
