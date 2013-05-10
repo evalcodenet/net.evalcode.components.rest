@@ -34,12 +34,17 @@ namespace Components;
     // STATIC ACCESSORS
     public static function dispatch(Http_Scriptlet_Context $context_, Uri $uri_)
     {
+      $resource=get_called_class();
+      if(!($method=$uri_->shiftPathParam()))
+        throw new Http_Exception('components/rest/resource', Http_Exception::NOT_FOUND);
+
       if(null===self::$m_methods || false===isset(self::$m_methods[$resource][$method]))
+      {
         self::initializeMethods();
 
-      $resource=get_called_class();
-      if(!($method=$uri_->shiftPathParam()) || false===isset(self::$m_methods[$resource][$method]))
-        throw new Http_Exception('components/rest/resource', Http_Exception::NOT_FOUND);
+        if(false===isset(self::$m_methods[$resource][$method]))
+          throw new Http_Exception('components/rest/resource', Http_Exception::NOT_FOUND);
+      }
 
       $method=self::$m_methods[$resource][$method];
       if(false===isset($method['methods'][$context_->getRequest()->getMethod()]))

@@ -26,7 +26,7 @@ namespace Components;
     {
       Log::info('components/rest/resource/test', 'Poke %s', $date_);
 
-      return $date_;
+      return $log_;
     }
     //--------------------------------------------------------------------------
   }
