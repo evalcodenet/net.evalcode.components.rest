@@ -36,22 +36,22 @@ namespace Components;
     {
       $resource=get_called_class();
       if(!($method=$uri_->shiftPathParam()))
-        throw new Http_Exception('components/rest/resource', Http_Exception::NOT_FOUND);
+        throw new Http_Exception('rest/resource', Http_Exception::NOT_FOUND);
 
       if(null===self::$m_methods || false===isset(self::$m_methods[$resource][$method]))
       {
         self::initializeMethods();
 
         if(false===isset(self::$m_methods[$resource][$method]))
-          throw new Http_Exception('components/rest/resource', Http_Exception::NOT_FOUND);
+          throw new Http_Exception('rest/resource', Http_Exception::NOT_FOUND);
       }
 
       $method=self::$m_methods[$resource][$method];
       if(false===isset($method['methods'][$context_->getRequest()->getMethod()]))
-        throw new Http_Exception('components/rest/resource', Http_Exception::NOT_FOUND);
+        throw new Http_Exception('rest/resource', Http_Exception::NOT_FOUND);
 
       if(isset($method['path']) && count($uri_->getPathParams())<count($method['path']))
-        throw new Http_Exception('components/rest/resource', Http_Exception::NOT_FOUND);
+        throw new Http_Exception('rest/resource', Http_Exception::NOT_FOUND);
 
       /* @var $resource Components\Rest_Resource */
       $resource=new $resource();
