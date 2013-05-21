@@ -24,7 +24,7 @@ namespace Components;
       Date /** @queryParam name=date */ $date_=null,
       Boolean /** @queryParam name=log, default=true */ $log_=null)
     {
-      Log::info('components/rest/resource/test', 'Poke %s', $date_);
+      Log::info('rest/resource/test', 'Poke %s', $date_);
 
       return Color::forHexString('cecfd0');
     }
