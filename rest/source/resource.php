@@ -61,7 +61,7 @@ namespace Components;
       $params=array();
       if(isset($method['path']) || isset($method['query']))
       {
-        $marshaller=Marshaller::forMimeType($resource->response->getMimeType());
+        $marshaller=Object_Marshaller::forMimeType($resource->response->getMimeType());
 
         foreach($method['path'] as $name=>$type)
           $params[$name]=$marshaller->unmarshal($uri_->shiftPathParam(), $type);
