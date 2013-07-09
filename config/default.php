@@ -4,5 +4,6 @@
 namespace Components;
 
 
-  Rest_Resource_Test::serve('test');
+  if(Environment::isDev())
+    Rest_Resource_Test::serve('test');
 ?>

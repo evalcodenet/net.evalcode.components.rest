@@ -28,6 +28,14 @@ namespace Components;
 
       return Color::forHexString('cecfd0');
     }
+
+    /**
+     * @GET
+     */
+    public function country()
+    {
+      return I18n::locale()->country();
+    }
     //--------------------------------------------------------------------------
   }
 ?>
