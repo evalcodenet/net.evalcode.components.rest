@@ -7,8 +7,8 @@ namespace Components;
   /**
    * Rest_Resource_Test
    *
-   * @package net.evalcode.components
-   * @subpackage rest.resource
+   * @package net.evalcode.components.rest
+   * @subpackage resource
    *
    * @author evalcode.net
    *
