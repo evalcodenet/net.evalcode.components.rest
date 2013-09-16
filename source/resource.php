@@ -7,8 +7,8 @@ namespace Components;
   /**
    * Rest_Resource
    *
-   * @package net.evalcode.components
-   * @subpackage rest
+   * @api
+   * @package net.evalcode.components.rest
    *
    * @author evalcode.net
    */
@@ -53,7 +53,7 @@ namespace Components;
       if(isset($method['path']) && count($uri_->getPathParams())<count($method['path']))
         throw Http_Exception::notFound('rest/resource');
 
-      /* @var $resource Components\Rest_Resource */
+      /* @var $resource \Components\Rest_Resource */
       $resource=new $resource();
       $resource->request=$context_->getRequest();
       $resource->response=$context_->getResponse();
@@ -88,8 +88,7 @@ namespace Components;
 
     // OVERRIDES
     /**
-     * (non-PHPdoc)
-     * @see Components\Object::equals()
+     * @see \Components\Object::equals() \Components\Object::equals()
      */
     public function equals($object_)
     {
@@ -100,8 +99,7 @@ namespace Components;
     }
 
     /**
-     * (non-PHPdoc)
-     * @see Components\Object::hashCode()
+     * @see \Components\Object::hashCode() \Components\Object::hashCode()
      */
     public function hashCode()
     {
@@ -109,8 +107,7 @@ namespace Components;
     }
 
     /**
-     * (non-PHPdoc)
-     * @see Components\Object::__toString()
+     * @see \Components\Object::__toString() \Components\Object::__toString()
      */
     public function __toString()
     {
