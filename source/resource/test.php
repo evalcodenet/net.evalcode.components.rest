@@ -21,7 +21,7 @@ namespace Components;
      * @GET
      */
     public function poke(/** @pathParam type=integer */ $pk_,
-      Color /** @queryParam name=color */ $color_,
+      Color /** @queryParam name=color */ $color_=null,
       Boolean /** @queryParam name=log, default=true */ $log_=null)
     {
       if(null===$color_)
