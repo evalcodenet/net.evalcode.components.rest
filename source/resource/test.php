@@ -21,20 +21,23 @@ namespace Components;
      * @GET
      */
     public function poke(/** @pathParam type=integer */ $pk_,
-      Date /** @queryParam name=date */ $date_=null,
+      Color /** @queryParam name=color */ $color_,
       Boolean /** @queryParam name=log, default=true */ $log_=null)
     {
-      Log::info('rest/resource/test', 'Poke %s', $date_);
+      if(null===$color_)
+        $color_=Color::white();
 
-      return Color::forHexString('cecfd0');
+      Log::info('rest/resource/test', 'Poke %s', $color_);
+
+      return $color_->toRgbString();
     }
 
     /**
      * @GET
      */
-    public function country()
+    public function country(I18n_Country /** @pathParam */ $country_)
     {
-      return I18n::locale()->country();
+      return $country_->title();
     }
     //--------------------------------------------------------------------------
   }

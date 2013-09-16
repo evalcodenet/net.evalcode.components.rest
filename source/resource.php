@@ -173,6 +173,8 @@ namespace Components;
 
                   if(Primitive::isNative($type))
                     $type=Primitive::asBoxed($type);
+                  else if($lookupType=Runtime_Classloader::lookup($type))
+                    $type=$lookupType;
                 }
                 else
                 {
@@ -208,6 +210,8 @@ namespace Components;
 
                   if(Primitive::isNative($type))
                     $type=Primitive::asBoxed($type);
+                  else if($lookupType=Runtime_Classloader::lookup($type))
+                    $type=$lookupType;
 
                   $path[$parameter->name]=$type;
                 }
