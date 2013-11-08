@@ -58,7 +58,7 @@ namespace Components;
       $resource->request=$context_->getRequest();
       $resource->response=$context_->getResponse();
 
-      $params=array();
+      $params=[];
       if(isset($method['path']) || isset($method['query']))
       {
         $marshaller=Object_Marshaller::forMimetype($resource->response->getMimetype());
@@ -118,7 +118,7 @@ namespace Components;
 
     // IMPLEMENTATION
     private static $m_initialized=false;
-    private static $m_resources=array();
+    private static $m_resources=[];
     private static $m_methods;
     //-----
 
@@ -126,7 +126,7 @@ namespace Components;
     private static function initializeMethods()
     {
       if(false===(self::$m_methods=Cache::get('components/rest/methods')))
-        self::$m_methods=array();
+        self::$m_methods=[];
 
       foreach(self::$m_resources as $resource)
       {
@@ -137,7 +137,7 @@ namespace Components;
 
         foreach($annotations->getMethodAnnotations() as $methodName=>$methodAnnotations)
         {
-          $httpMethods=array();
+          $httpMethods=[];
           foreach($methodAnnotations as $methodAnnotationName=>$methodAnnotation)
           {
             if($methodAnnotation instanceof Annotation_Method)
@@ -151,8 +151,8 @@ namespace Components;
 
             $parameters=$method->getParameters();
 
-            $path=array();
-            $query=array();
+            $path=[];
+            $query=[];
             foreach($parameters as $parameter)
             {
               $parameterAnnotations=$annotations->getParameterAnnotations($methodName, $parameter->name);
@@ -222,7 +222,7 @@ namespace Components;
               }
             }
 
-            $matches=array();
+            $matches=[];
             preg_match('/\@return\s+([\\a-z]+)\n/i', $method->getDocComment(), $matches);
 
             $return=null;
