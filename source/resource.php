@@ -86,6 +86,14 @@ namespace Components;
     //--------------------------------------------------------------------------
 
 
+    // ACCESSORS
+    public function invoke($method_, array $args_)
+    {
+
+    }
+    //--------------------------------------------------------------------------
+
+
     // OVERRIDES
     /**
      * @see \Components\Object::equals() \Components\Object::equals()
