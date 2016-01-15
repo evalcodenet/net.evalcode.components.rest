@@ -34,9 +34,10 @@ namespace Components;
     // STATIC ACCESSORS
     public static function dispatch(Http_Scriptlet_Context $context_, Uri $uri_)
     {
-      $resource=get_called_class();
       if(!($method=$uri_->shiftPathParam()))
         throw new Http_Exception('rest/resource', null, Http_Exception::NOT_FOUND);
+
+      $resource=get_called_class();
 
       if(null===self::$m_methods || false===isset(self::$m_methods[$resource][$method]))
       {
@@ -80,7 +81,7 @@ namespace Components;
         }
       }
 
-      if($result=call_user_func_array(array($resource, $method['name']), $params))
+      if($result=call_user_func_array([$resource, $method['name']], $params))
         echo $marshaller->marshal($result);
     }
     //--------------------------------------------------------------------------
@@ -96,7 +97,7 @@ namespace Components;
 
     // OVERRIDES
     /**
-     * @see \Components\Object::equals() \Components\Object::equals()
+     * @see \Components\Object::equals() equals
      */
     public function equals($object_)
     {
@@ -107,15 +108,15 @@ namespace Components;
     }
 
     /**
-     * @see \Components\Object::hashCode() \Components\Object::hashCode()
+     * @see \Components\Object::hashCode() hashCode
      */
     public function hashCode()
     {
-      return object_hash($this);
+      return \math\hasho($this);
     }
 
     /**
-     * @see \Components\Object::__toString() \Components\Object::__toString()
+     * @see \Components\Object::__toString() __toString
      */
     public function __toString()
     {
@@ -194,11 +195,11 @@ namespace Components;
                 else
                   $value=null;
 
-                $query[$parameter->name]=array(
+                $query[$parameter->name]=[
                   'name'=>$name,
                   'type'=>$type,
                   'value'=>$value
-                );
+                ];
               }
               else if($parameter->isOptional())
               {
@@ -237,13 +238,13 @@ namespace Components;
             if(isset($matches[1]))
               $return=$matches[1];
 
-            self::$m_methods[$resource][$methodName]=array(
+            self::$m_methods[$resource][$methodName]=[
               'name'=>$methodName,
               'methods'=>$httpMethods,
               'path'=>$path,
               'query'=>$query,
               'return'=>$return
-            );
+            ];
           }
         }
       }
@@ -253,7 +254,7 @@ namespace Components;
 
     private static function initialize()
     {
-      Annotations::registerAnnotations(array(
+      Annotations::registerAnnotations([
         Annotation_Application::NAME=>Annotation_Application::TYPE,
         Annotation_Method_Delete::NAME=>Annotation_Method_Delete::TYPE,
         Annotation_Method_Get::NAME=>Annotation_Method_Get::TYPE,
@@ -262,7 +263,7 @@ namespace Components;
         Annotation_Method_Put::NAME=>Annotation_Method_Put::TYPE,
         Annotation_Param_Path::NAME=>Annotation_Param_Path::TYPE,
         Annotation_Param_Query::NAME=>Annotation_Param_Query::TYPE
-      ));
+      ]);
 
       self::$m_initialized=true;
     }
